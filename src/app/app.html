@@ -2,30 +2,6 @@
   <header class="hero-section">
     <p class="eyebrow">Control de salida | Figura 6</p>
     <h1>{{ pageMeta.title }}</h1>
-    <p class="hero-subtitle">{{ pageMeta.contract }}</p>
-
-    <div class="meta-grid">
-      <article>
-        <p class="meta-label">Fecha</p>
-        <p class="meta-value">{{ pageMeta.year }}</p>
-      </article>
-      <article>
-        <p class="meta-label">Paginas</p>
-        <p class="meta-value">{{ pageMeta.pages }}</p>
-      </article>
-      <article>
-        <p class="meta-label">Telefonos</p>
-        <p class="meta-value">{{ pageMeta.phones }}</p>
-      </article>
-      <article>
-        <p class="meta-label">Correos</p>
-        <p class="meta-value">{{ pageMeta.emails }}</p>
-      </article>
-      <article>
-        <p class="meta-label">Sitio web</p>
-        <p class="meta-value">{{ pageMeta.website }}</p>
-      </article>
-    </div>
 
     <nav class="view-nav" aria-label="Navegacion principal">
       <button
@@ -48,6 +24,14 @@
         (click)="requestView('panel')"
       >
         Panel de control
+      </button>
+      <button
+        type="button"
+        [class.active]="activeView === 'historial'"
+        (click)="requestView('historial')"
+        class="btn-secondary"
+      >
+        Historial
       </button>
     </nav>
   </header>
@@ -416,6 +400,97 @@
             }
           </div>
         </div>
+      }
+    </section>
+  }
+
+  @if (activeView === 'historial') {
+    <section class="card history-section">
+      <div class="card-heading">
+        <h2>Historial completo de movimientos</h2>
+        <p>Consulta todos los registros de ingreso y salida documentados en el sistema.</p>
+      </div>
+
+      @if (records.length === 0) {
+        <p class="empty-state">No hay movimientos registrados aún.</p>
+      } @else {
+        <div class="history-controls">
+          <div class="filter-group">
+            <label for="filter-type">Filtrar por tipo:</label>
+            <select id="filter-type" #filterType (change)="filterByType(filterType.value)">
+              <option value="">Todos los movimientos</option>
+              <option value="ingreso">Solo ingresos</option>
+              <option value="salida">Solo salidas</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Material</th>
+                <th>Volqueta</th>
+                <th>Conductor</th>
+                <th>Volumen (m³)</th>
+                <th>Destino</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (record of filteredRecords; track record.id) {
+                <tr [class.ingreso]="record.type === 'ingreso'" [class.salida]="record.type === 'salida'">
+                  <td><span class="badge" [class.badge-in]="record.type === 'ingreso'" [class.badge-out]="record.type === 'salida'">{{ formatMovementType(record.type) }}</span></td>
+                  <td>{{ record.fecha }}</td>
+                  <td>{{ record.hora || '-' }}</td>
+                  <td>{{ record.material }}</td>
+                  <td>{{ record.volqueta }}</td>
+                  <td>{{ record.conductor || '-' }}</td>
+                  <td class="volume-cell">{{ formatVolume(record.volumen) }}</td>
+                  <td>{{ record.destino || '-' }}</td>
+                  <td class="row-actions">
+                    <button type="button" class="tiny ghost" (click)="viewRecordDetails(record.id)" title="Ver detalles">
+                      Ver
+                    </button>
+                    <button type="button" class="tiny danger" (click)="deleteRecord(record.id)" title="Eliminar registro">
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (recordsByMaterial.length > 0) {
+          <div class="inventory-summary">
+            <h3>Resumen de inventario actual</h3>
+            <div class="summary-grid">
+              @for (item of recordsByMaterial; track item.material) {
+                <article class="inventory-card">
+                  <p class="material-name">{{ item.material }}</p>
+                  <div class="inventory-stat">
+                    <span class="label">Inventario</span>
+                    <strong class="value">{{ formatVolume(item.inventario) }}</strong>
+                  </div>
+                  <div class="stat-row">
+                    <div class="stat">
+                      <span class="label-small">Ingreso</span>
+                      <span class="value-small in">+{{ formatVolume(item.ingreso) }}</span>
+                    </div>
+                    <div class="stat">
+                      <span class="label-small">Salida</span>
+                      <span class="value-small out">-{{ formatVolume(item.salida) }}</span>
+                    </div>
+                  </div>
+                </article>
+              }
+            </div>
+          </div>
+        }
       }
     </section>
   }

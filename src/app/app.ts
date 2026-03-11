@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-type ViewMode = 'registro' | 'recibo' | 'panel';
+type ViewMode = 'registro' | 'recibo' | 'panel' | 'historial';
 type MovementType = 'ingreso' | 'salida';
 
 interface MovementFormModel {
@@ -88,6 +88,8 @@ export class App {
   protected activeView: ViewMode = 'registro';
   protected pendingView: ViewMode | null = null;
   protected showSwitchDialog = false;
+  protected filteredRecords: MovementRecord[] = [];
+  protected filterType: MovementType | '' = '';
 
   protected movementForm: MovementFormModel = this.buildEmptyForm();
   protected records: MovementRecord[] = [];
@@ -100,8 +102,10 @@ export class App {
 
   constructor() {
     this.loadLocalState();
+    this.initializeFormDates();
     this.formSnapshot = this.serializeForm(this.movementForm);
     this.updateReceiptPreview();
+    this.updateFilteredRecords();
   }
 
   protected readonly procedureSteps = [
@@ -272,6 +276,7 @@ export class App {
     };
 
     this.records = [nextRecord, ...this.records];
+    this.updateFilteredRecords();
     this.selectLatestSalida();
     this.resetForm();
     this.persistLocalState();
@@ -279,6 +284,7 @@ export class App {
 
   protected deleteRecord(id: number): void {
     this.records = this.records.filter((record) => record.id !== id);
+    this.updateFilteredRecords();
 
     if (this.selectedReceiptRecordId === id) {
       this.selectedReceiptRecordId = null;
@@ -326,7 +332,23 @@ export class App {
       ...this.buildEmptyForm(),
       type: defaultType
     };
+    this.initializeFormDates();
     this.formSnapshot = this.serializeForm(this.movementForm);
+  }
+
+  private initializeFormDates(): void {
+    const now = new Date();
+
+    // Formato para input date: YYYY-MM-DD
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    this.movementForm.fecha = `${year}-${month}-${day}`;
+
+    // Formato para input time: HH:MM
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    this.movementForm.hora = `${hours}:${minutes}`;
   }
 
   protected onMovementTypeChange(): void {
@@ -380,6 +402,30 @@ export class App {
 
   protected get salidaRecords(): MovementRecord[] {
     return this.records.filter((record) => record.type === 'salida');
+  }
+
+  protected filterByType(type: string): void {
+    this.filterType = (type === 'ingreso' || type === 'salida' ? type : '') as MovementType | '';
+    this.updateFilteredRecords();
+  }
+
+  protected viewRecordDetails(id: number): void {
+    const record = this.records.find((r) => r.id === id);
+    if (record) {
+      console.log('Detalles del registro:', record);
+      // Aquí podría abrir un modal o navegar a una vista de detalles
+      alert(
+        `Detalles del movimiento:\n\nTipo: ${this.formatMovementType(record.type)}\nFecha: ${record.fecha}\nMaterial: ${record.material}\nVolumen: ${this.formatVolume(record.volumen)}\nConductor: ${record.conductor}\nDestino: ${record.destino || 'N/A'}`
+      );
+    }
+  }
+
+  private updateFilteredRecords(): void {
+    if (!this.filterType) {
+      this.filteredRecords = [...this.records];
+    } else {
+      this.filteredRecords = this.records.filter((record) => record.type === this.filterType);
+    }
   }
 
   protected formatMovementType(value: MovementType): string {
